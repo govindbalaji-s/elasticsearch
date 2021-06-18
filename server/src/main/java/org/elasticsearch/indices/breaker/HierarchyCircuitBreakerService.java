@@ -30,11 +30,7 @@ import org.elasticsearch.monitor.jvm.JvmInfo;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
@@ -299,8 +295,11 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
     /**
      * Checks whether the parent breaker has been tripped
      */
-    public void checkParentLimit(long newBytesReserved, String label) throws CircuitBreakingException {
+    public void checkParentLimit(long newBytesReserved, String label, boolean isRequestCB) throws CircuitBreakingException {
         final MemoryUsage memoryUsed = memoryUsed(newBytesReserved);
+        if(isRequestCB) {
+            logger.info("Memory Used = " + memoryUsed.baseUsage + ", " + memoryUsed.totalUsage);
+        }
         long parentLimit = this.parentSettings.getLimit();
         if (memoryUsed.totalUsage > parentLimit && overLimitStrategy.overLimit(memoryUsed).totalUsage > parentLimit) {
             this.parentTripCount.incrementAndGet();
@@ -332,7 +331,8 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
             CircuitBreaker.Durability durability = memoryUsed.transientChildUsage >= memoryUsed.permanentChildUsage ?
                 CircuitBreaker.Durability.TRANSIENT : CircuitBreaker.Durability.PERMANENT;
             logger.debug(() -> new ParameterizedMessage("{}", message.toString()));
-            throw new CircuitBreakingException(message.toString(), memoryUsed.totalUsage, parentLimit, durability);
+//            if(!isRequestCB)
+                throw new CircuitBreakingException(message.toString(), memoryUsed.totalUsage, parentLimit, durability);
         }
     }
 
