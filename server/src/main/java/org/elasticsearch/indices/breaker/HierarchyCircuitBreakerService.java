@@ -30,11 +30,7 @@ import org.elasticsearch.monitor.jvm.JvmInfo;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
@@ -73,8 +69,10 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
      * CircuitBreaker.REQUEST.
      * Default value = 90% of TOTAL_CIRCUIT_BREAKER_LIMIT_SETTING
      */
-    public static final Setting<Boolean> TOTAL_CIRCUIT_BREAKER_BREAK_ONLY_REQUEST_SETTING =
-        Setting.boolSetting("indices.breaker.total.break_only_request", false, Property.NodeScope);
+    private static final List<String> TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR_DEFAULT = new ArrayList<>();
+    public static final Setting<List<String>> TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR =
+        Setting.listSetting("indices.breaker.total.exclude_real_memory_for", TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR_DEFAULT, Function.identity(),
+            Property.NodeScope);
 
     public static final Setting<ByteSizeValue> FIELDDATA_CIRCUIT_BREAKER_LIMIT_SETTING =
         Setting.memorySizeSetting("indices.breaker.fielddata.limit", "40%", Property.Dynamic, Property.NodeScope);
@@ -105,7 +103,7 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
         new Setting<>("network.breaker.inflight_requests.type", "memory", CircuitBreaker.Type::parseValue, Property.NodeScope);
 
     private final boolean trackRealMemoryUsage;
-    private final boolean breakOnlyRequest;
+    private final List<String> doNotUseRealMemoryFor;
     private volatile BreakerSettings parentSettings;
 
     // Tripped count for when redistribution was attempted but wasn't successful
@@ -163,7 +161,7 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
         logger.trace(() -> new ParameterizedMessage("parent circuit breaker with settings {}", this.parentSettings));
 
         this.trackRealMemoryUsage = USE_REAL_MEMORY_USAGE_SETTING.get(settings);
-        this.breakOnlyRequest = TOTAL_CIRCUIT_BREAKER_BREAK_ONLY_REQUEST_SETTING.get(settings);
+        this.doNotUseRealMemoryFor = TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR.get(settings);
 
         clusterSettings.addSettingsUpdateConsumer(TOTAL_CIRCUIT_BREAKER_LIMIT_SETTING, this::setTotalCircuitBreakerLimit,
             this::validateTotalCircuitBreakerLimit);
@@ -348,8 +346,9 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
             CircuitBreaker.Durability durability = memoryUsed.transientChildUsage >= memoryUsed.permanentChildUsage ?
                 CircuitBreaker.Durability.TRANSIENT : CircuitBreaker.Durability.PERMANENT;
             logger.debug(() -> new ParameterizedMessage("{}", message.toString()));
-            if (this.breakOnlyRequest && !childBreakerName.equals(CircuitBreaker.REQUEST)) {
-                logger.debug("not breaking since child breaker != REQUEST");
+            // should not break if it is real memory and the child breaker is excluded
+            if (this.trackRealMemoryUsage && doNotUseRealMemoryFor.contains(childBreakerName)) {
+                logger.debug("not breaking since child breaker " + childBreakerName + " is excluded");
             } else {
                 throw new CircuitBreakingException(message.toString(), memoryUsed.totalUsage, parentLimit, durability);
             }
