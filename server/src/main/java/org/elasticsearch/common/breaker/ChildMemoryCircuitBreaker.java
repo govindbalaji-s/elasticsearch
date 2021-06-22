@@ -89,25 +89,14 @@ public class ChildMemoryCircuitBreaker implements CircuitBreaker {
         // If there is no limit (-1), we can optimize a bit by using
         // .addAndGet() instead of looping (because we don't have to check a
         // limit), which makes the RamAccountingTermsEnum case faster.
-        boolean isRequestCB = false;
         if (memoryBytesLimit == -1) {
             newUsed = noLimit(bytes, label);
         } else {
-            if(name.equals(CircuitBreaker.REQUEST)) {
-//                StackTraceElement[] st = (new Throwable()).getStackTrace();
-//                logger.info(Arrays.toString(Arrays.copyOfRange(st, 0, Math.min(5, st.length))));
-//                logger.info("newBytesReserved = " + bytes);
-                isRequestCB = true;
-            }
-//            final HierarchyCircuitBreakerService.MemoryUsage memoryUsed = memoryUsed(newBytesReserved);
-//
             newUsed = limit(bytes, label, overheadConstant, memoryBytesLimit);
         }
-//        if(isRequestCB)
-//            logger.info("newUsed at child CB = " + newUsed);
         // Additionally, we need to check that we haven't exceeded the parent's limit
         try {
-            parent.checkParentLimit((long) (bytes * overheadConstant), label, isRequestCB);
+            parent.checkParentLimit((long) (bytes * overheadConstant), label, this.name);
         } catch (CircuitBreakingException e) {
             // If the parent breaker is tripped, this breaker has to be
             // adjusted back down because the allocation is "blocked" but the

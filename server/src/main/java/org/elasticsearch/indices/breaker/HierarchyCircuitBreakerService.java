@@ -65,6 +65,13 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
             }
         }, Property.Dynamic, Property.NodeScope);
 
+    /** Same as TOTAL_CIRCUIT_BREAKER_LIMIT_SETTING but this is used when the triggering child breaker is
+     * CircuitBreaker.REQUEST.
+     * Default value = 90% of TOTAL_CIRCUIT_BREAKER_LIMIT_SETTING
+     */
+    public static final Setting<Boolean> TOTAL_CIRCUIT_BREAKER_BREAK_ONLY_REQUEST_SETTING =
+        Setting.boolSetting("indices.breaker.total.break_only_request", false, Property.NodeScope);
+
     public static final Setting<ByteSizeValue> FIELDDATA_CIRCUIT_BREAKER_LIMIT_SETTING =
         Setting.memorySizeSetting("indices.breaker.fielddata.limit", "40%", Property.Dynamic, Property.NodeScope);
     public static final Setting<Double> FIELDDATA_CIRCUIT_BREAKER_OVERHEAD_SETTING =
@@ -94,6 +101,7 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
         new Setting<>("network.breaker.inflight_requests.type", "memory", CircuitBreaker.Type::parseValue, Property.NodeScope);
 
     private final boolean trackRealMemoryUsage;
+    private final boolean breakOnlyRequest;
     private volatile BreakerSettings parentSettings;
 
     // Tripped count for when redistribution was attempted but wasn't successful
@@ -151,6 +159,7 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
         logger.trace(() -> new ParameterizedMessage("parent circuit breaker with settings {}", this.parentSettings));
 
         this.trackRealMemoryUsage = USE_REAL_MEMORY_USAGE_SETTING.get(settings);
+        this.breakOnlyRequest = TOTAL_CIRCUIT_BREAKER_BREAK_ONLY_REQUEST_SETTING.get(settings);
 
         clusterSettings.addSettingsUpdateConsumer(TOTAL_CIRCUIT_BREAKER_LIMIT_SETTING, this::setTotalCircuitBreakerLimit,
             this::validateTotalCircuitBreakerLimit);
@@ -292,13 +301,17 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
         return this.parentSettings.getLimit();
     }
 
+    /* For logging checkParentLimit*/
+    long lastUsed = 0;
+
     /**
      * Checks whether the parent breaker has been tripped
      */
-    public void checkParentLimit(long newBytesReserved, String label, boolean isRequestCB) throws CircuitBreakingException {
+    public void checkParentLimit(long newBytesReserved, String label, String childBreakerName) throws CircuitBreakingException {
         final MemoryUsage memoryUsed = memoryUsed(newBytesReserved);
-        if(isRequestCB) {
+        if(Math.abs(memoryUsed.totalUsage - lastUsed) >= 1000000) {
             logger.info("Memory Used = " + memoryUsed.baseUsage + ", " + memoryUsed.totalUsage);
+            lastUsed = memoryUsed.totalUsage;
         }
         long parentLimit = this.parentSettings.getLimit();
         if (memoryUsed.totalUsage > parentLimit && overLimitStrategy.overLimit(memoryUsed).totalUsage > parentLimit) {
@@ -331,8 +344,11 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
             CircuitBreaker.Durability durability = memoryUsed.transientChildUsage >= memoryUsed.permanentChildUsage ?
                 CircuitBreaker.Durability.TRANSIENT : CircuitBreaker.Durability.PERMANENT;
             logger.debug(() -> new ParameterizedMessage("{}", message.toString()));
-//            if(!isRequestCB)
+            if (this.breakOnlyRequest && !childBreakerName.equals(CircuitBreaker.REQUEST)) {
+                logger.debug("not breaking since child breaker != REQUEST");
+            } else {
                 throw new CircuitBreakingException(message.toString(), memoryUsed.totalUsage, parentLimit, durability);
+            }
         }
     }
 
