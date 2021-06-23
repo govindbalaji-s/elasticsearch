@@ -122,7 +122,25 @@ import org.elasticsearch.persistent.PersistentTasksClusterService;
 import org.elasticsearch.persistent.PersistentTasksExecutor;
 import org.elasticsearch.persistent.PersistentTasksExecutorRegistry;
 import org.elasticsearch.persistent.PersistentTasksService;
-import org.elasticsearch.plugins.*;
+import org.elasticsearch.plugins.ActionPlugin;
+import org.elasticsearch.plugins.AnalysisPlugin;
+import org.elasticsearch.plugins.CircuitBreakerPlugin;
+import org.elasticsearch.plugins.CircuitBreakerServicePlugin;
+import org.elasticsearch.plugins.ClusterPlugin;
+import org.elasticsearch.plugins.DiscoveryPlugin;
+import org.elasticsearch.plugins.EnginePlugin;
+import org.elasticsearch.plugins.IndexStorePlugin;
+import org.elasticsearch.plugins.IngestPlugin;
+import org.elasticsearch.plugins.MapperPlugin;
+import org.elasticsearch.plugins.MetadataUpgrader;
+import org.elasticsearch.plugins.NetworkPlugin;
+import org.elasticsearch.plugins.PersistentTaskPlugin;
+import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.plugins.PluginsService;
+import org.elasticsearch.plugins.RepositoryPlugin;
+import org.elasticsearch.plugins.ScriptPlugin;
+import org.elasticsearch.plugins.SearchPlugin;
+import org.elasticsearch.plugins.SystemIndexPlugin;
 import org.elasticsearch.repositories.RepositoriesModule;
 import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.rest.RestController;
@@ -547,7 +565,10 @@ public class Node implements Closeable {
                 .collect(Collectors.toList());
 
             pluginsService.filterPlugins(CircuitBreakerServicePlugin.class)
-                .forEach(plugin -> plugin.setCircuitBreakerService(circuitBreakerService));
+                .forEach(plugin -> {
+                    plugin.setCircuitBreakerService(circuitBreakerService);
+                    plugin.setBigArrays(bigArrays.withCircuitBreaking());
+                });
 
             ActionModule actionModule = new ActionModule(false, settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),

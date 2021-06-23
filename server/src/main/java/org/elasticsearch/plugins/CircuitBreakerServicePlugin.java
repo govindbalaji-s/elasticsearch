@@ -8,6 +8,7 @@
 
 package org.elasticsearch.plugins;
 
+import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 
 /**
@@ -18,5 +19,14 @@ public interface CircuitBreakerServicePlugin {
     /**
      * When HierarchyCircuitBreakerService is initialized, this method is invoked.
      */
-    void setCircuitBreakerService(CircuitBreakerService circuitBreakerService);
+    default void setCircuitBreakerService(CircuitBreakerService circuitBreakerService) {
+    }
+
+    /**
+     * When BigArrays is initialized, this method is invoked
+     *
+     * @param bigArrays the circuit breaking instance of BigArrays
+     */
+    default void setBigArrays(BigArrays bigArrays) {
+    }
 }
