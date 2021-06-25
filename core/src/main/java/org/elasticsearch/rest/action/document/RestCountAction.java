@@ -71,6 +71,7 @@ public class RestCountAction extends BaseRestHandler {
             }
         });
         countRequest.routing(request.param("routing"));
+        countRequest.isThrottled(request.paramAsBoolean("throttle", null));
         float minScore = request.paramAsFloat("min_score", -1f);
         if (minScore != -1f) {
             searchSourceBuilder.minScore(minScore);

@@ -75,6 +75,7 @@ public class BulkByScrollParallelizationHelper {
                     .routing(request.routing())
                     .preference(request.preference())
                     .requestCache(request.requestCache())
+                    .isThrottled(request.isThrottled())
                     .scroll(request.scroll())
                     .indicesOptions(request.indicesOptions());
         }

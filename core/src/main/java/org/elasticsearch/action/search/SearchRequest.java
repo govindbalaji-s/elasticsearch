@@ -308,8 +308,9 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
     /**
      * Sets if this request will be executed on SEARCH_THROTTLED thread pool, rather than the SEARCH thread pool.
      */
-    public void isThrottled(Boolean isThrottled) {
+    public SearchRequest isThrottled(Boolean isThrottled) {
         this.isThrottled = isThrottled;
+        return this;
     }
 
     public Boolean isThrottled() {

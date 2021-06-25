@@ -111,6 +111,7 @@ public class RestSearchAction extends BaseRestHandler {
         }
         parseSearchSource(searchRequest.source(), request);
         searchRequest.requestCache(request.paramAsBoolean("request_cache", null));
+        searchRequest.isThrottled(request.paramAsBoolean("throttle", null));
 
         String scroll = request.param("scroll");
         if (scroll != null) {

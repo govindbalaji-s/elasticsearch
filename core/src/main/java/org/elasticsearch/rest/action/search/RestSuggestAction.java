@@ -67,6 +67,7 @@ public class RestSuggestAction extends BaseRestHandler {
         }
         searchRequest.routing(request.param("routing"));
         searchRequest.preference(request.param("preference"));
+        searchRequest.isThrottled(request.paramAsBoolean("throttle", null));
         return channel -> client.search(searchRequest, new RestBuilderListener<SearchResponse>(channel) {
             @Override
             public RestResponse buildResponse(SearchResponse response, XContentBuilder builder) throws Exception {
