@@ -72,6 +72,7 @@ public class ThreadPool extends AbstractComponent implements Closeable {
         public static final String INDEX = "index";
         public static final String BULK = "bulk";
         public static final String SEARCH = "search";
+        public static final String SEARCH_THROTTLED = "search_throttled";
         public static final String MANAGEMENT = "management";
         public static final String FLUSH = "flush";
         public static final String REFRESH = "refresh";
@@ -127,6 +128,7 @@ public class ThreadPool extends AbstractComponent implements Closeable {
         map.put(Names.INDEX, ThreadPoolType.FIXED);
         map.put(Names.BULK, ThreadPoolType.FIXED);
         map.put(Names.SEARCH, ThreadPoolType.FIXED);
+        map.put(Names.SEARCH_THROTTLED, ThreadPoolType.FIXED);
         map.put(Names.MANAGEMENT, ThreadPoolType.SCALING);
         map.put(Names.FLUSH, ThreadPoolType.SCALING);
         map.put(Names.REFRESH, ThreadPoolType.SCALING);
@@ -172,6 +174,7 @@ public class ThreadPool extends AbstractComponent implements Closeable {
         builders.put(Names.BULK, new FixedExecutorBuilder(settings, Names.BULK, availableProcessors, 200)); // now that we reuse bulk for index/delete ops
         builders.put(Names.GET, new FixedExecutorBuilder(settings, Names.GET, availableProcessors, 1000));
         builders.put(Names.SEARCH, new FixedExecutorBuilder(settings, Names.SEARCH, searchThreadPoolSize(availableProcessors), 1000));
+        builders.put(Names.SEARCH_THROTTLED, new FixedExecutorBuilder(settings, Names.SEARCH_THROTTLED, 1, 100));
         builders.put(Names.MANAGEMENT, new ScalingExecutorBuilder(Names.MANAGEMENT, 1, 5, TimeValue.timeValueMinutes(5)));
         // no queue as this means clients will need to handle rejections on listener queue even if the operation succeeded
         // the assumption here is that the listeners should be very lightweight on the listeners side
