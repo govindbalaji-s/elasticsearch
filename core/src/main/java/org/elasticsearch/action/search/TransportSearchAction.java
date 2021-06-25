@@ -321,7 +321,8 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
     }
 
     public static String getExecutorName(SearchRequest searchRequest) {
-        return searchRequest.isThrottled() ? ThreadPool.Names.SEARCH_THROTTLED : ThreadPool.Names.SEARCH;
+        Boolean isThrottled = searchRequest.isThrottled();
+        return isThrottled != null && isThrottled ? ThreadPool.Names.SEARCH_THROTTLED : ThreadPool.Names.SEARCH;
     }
 
     private static void failIfOverShardCountLimit(ClusterService clusterService, int shardCount) {

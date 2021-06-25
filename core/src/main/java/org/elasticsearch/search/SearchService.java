@@ -830,7 +830,8 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     }
 
     private Executor getExecutor(ShardSearchRequest request) {
-        String executorName = request.isThrottled() ? Names.SEARCH_THROTTLED : Names.SEARCH;
+        Boolean isThrottled = request.isThrottled();
+        String executorName = isThrottled != null && isThrottled ? Names.SEARCH_THROTTLED : Names.SEARCH;
         return threadPool.executor(executorName);
     }
 
