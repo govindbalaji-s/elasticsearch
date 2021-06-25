@@ -301,7 +301,7 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
                                                         long clusterStateVersion, Map<String, AliasFilter> aliasFilter,
                                                         Map<String, Float> concreteIndexBoosts,
                                                         ActionListener<SearchResponse> listener) {
-        Executor executor = threadPool.executor(ThreadPool.Names.SEARCH);
+        Executor executor = threadPool.executor(getExecutorName(searchRequest));
         AbstractSearchAsyncAction searchAsyncAction;
         switch(searchRequest.searchType()) {
             case DFS_QUERY_THEN_FETCH:
@@ -318,6 +318,10 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
                 throw new IllegalStateException("Unknown search type: [" + searchRequest.searchType() + "]");
         }
         return searchAsyncAction;
+    }
+
+    public static String getExecutorName(SearchRequest searchRequest) {
+        return searchRequest.isThrottled() ? ThreadPool.Names.SEARCH_THROTTLED : ThreadPool.Names.SEARCH;
     }
 
     private static void failIfOverShardCountLimit(ClusterService clusterService, int shardCount) {

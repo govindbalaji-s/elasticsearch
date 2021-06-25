@@ -224,7 +224,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     public void executeDfsPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         getExecutor(request).execute(
-            new TransportChannelResponseRunnable(action, ()->executeDfsPhase(request, (SearchTask)task), channel)
+            new TransportChannelResponseRunnable(action, ()->executeDfsPhase(request, task), channel)
         );
     }
 
@@ -261,7 +261,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     public void executeQueryPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         getExecutor(request).execute(
-            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, (SearchTask)task), channel)
+            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, task), channel)
         );
     }
 
@@ -322,6 +322,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         return new QueryFetchSearchResult(context.queryResult(), context.fetchResult());
     }
 
+    public void executeQueryPhaseAndSendResponse(String action, InternalScrollSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, task), channel)
+        );
+    }
+
     public ScrollQuerySearchResult executeQueryPhase(InternalScrollSearchRequest request, SearchTask task) {
         final SearchContext context = findContext(request.id());
         SearchOperationListener operationListener = context.indexShard().getSearchOperationListener();
@@ -344,6 +351,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } finally {
             cleanContext(context);
         }
+    }
+
+    public void executeQueryPhaseAndSendResponse(String action, QuerySearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, task), channel)
+        );
     }
 
     public QuerySearchResult executeQueryPhase(QuerySearchRequest request, SearchTask task) {
@@ -387,6 +401,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         }
     }
 
+    public void executeFetchPhaseAndSendResponse(String action, InternalScrollSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, ()->executeFetchPhase(request, task), channel)
+        );
+    }
+
     public ScrollQueryFetchSearchResult executeFetchPhase(InternalScrollSearchRequest request, SearchTask task) {
         final SearchContext context = findContext(request.id());
         context.incRef();
@@ -416,6 +437,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } finally {
             cleanContext(context);
         }
+    }
+
+    public void executeFetchPhaseAndSendResponse(String action, ShardFetchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, ()->executeFetchPhase(request, task), channel)
+        );
     }
 
     public FetchSearchResult executeFetchPhase(ShardFetchRequest request, SearchTask task) {

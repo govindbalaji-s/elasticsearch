@@ -202,7 +202,7 @@ final class RemoteClusterConnection extends AbstractComponent implements Transpo
 
                 @Override
                 public String executor() {
-                    return ThreadPool.Names.SEARCH;
+                    return TransportSearchAction.getExecutorName(searchRequest);
                 }
             });
     }
