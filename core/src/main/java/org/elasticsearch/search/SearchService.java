@@ -24,10 +24,13 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.IOUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.action.ActionRunnable;
 import org.elasticsearch.action.OriginalIndices;
+import org.elasticsearch.action.TransportChannelResponseRunnable;
 import org.elasticsearch.action.search.SearchTask;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.lucene.Lucene;
@@ -86,6 +89,7 @@ import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.threadpool.ThreadPool.Cancellable;
 import org.elasticsearch.threadpool.ThreadPool.Names;
+import org.elasticsearch.transport.TransportChannel;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -94,6 +98,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.elasticsearch.common.unit.TimeValue.timeValueMillis;
@@ -217,6 +222,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         keepAliveReaper.cancel();
     }
 
+    public void executeDfsPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        getExecutor(request).execute(
+            new TransportChannelResponseRunnable(action, ()->executeDfsPhase(request, (SearchTask)task), channel)
+        );
+    }
+
     public DfsSearchResult executeDfsPhase(ShardSearchRequest request, SearchTask task) throws IOException {
         final SearchContext context = createAndPutContext(request);
         context.incRef();
@@ -246,6 +257,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } else {
             queryPhase.execute(context);
         }
+    }
+
+    public void executeQueryPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        getExecutor(request).execute(
+            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, (SearchTask)task), channel)
+        );
     }
 
     public SearchPhaseResult executeQueryPhase(ShardSearchRequest request, SearchTask task) throws IOException {
@@ -782,6 +799,11 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         if (request.scroll() != null && request.scroll().keepAlive() != null) {
             context.keepAlive(request.scroll().keepAlive().millis());
         }
+    }
+
+    private Executor getExecutor(ShardSearchRequest request) {
+        String executorName = request.isThrottled() ? Names.SEARCH_THROTTLED : Names.SEARCH;
+        return threadPool.executor(executorName);
     }
 
     /**
