@@ -25,6 +25,7 @@ import org.apache.lucene.util.IOUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.OriginalIndices;
+import org.elasticsearch.action.TransportChannelResponseRunnable;
 import org.elasticsearch.action.search.SearchTask;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.service.ClusterService;
@@ -86,6 +87,7 @@ import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.threadpool.ThreadPool.Cancellable;
 import org.elasticsearch.threadpool.ThreadPool.Names;
+import org.elasticsearch.transport.TransportChannel;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -94,6 +96,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.elasticsearch.common.unit.TimeValue.timeValueMillis;
@@ -217,6 +220,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         keepAliveReaper.cancel();
     }
 
+    public void executeDfsPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        getExecutor(request).execute(
+            new TransportChannelResponseRunnable(action, () -> executeDfsPhase(request, task), channel)
+        );
+    }
+
     public DfsSearchResult executeDfsPhase(ShardSearchRequest request, SearchTask task) throws IOException {
         final SearchContext context = createAndPutContext(request);
         context.incRef();
@@ -246,6 +255,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } else {
             queryPhase.execute(context);
         }
+    }
+
+    public void executeQueryPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        getExecutor(request).execute(
+            new TransportChannelResponseRunnable(action, () -> executeQueryPhase(request, task), channel)
+        );
     }
 
     public SearchPhaseResult executeQueryPhase(ShardSearchRequest request, SearchTask task) throws IOException {
@@ -305,6 +320,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         return new QueryFetchSearchResult(context.queryResult(), context.fetchResult());
     }
 
+    public void executeQueryPhaseAndSendResponse(String action, InternalScrollSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, () -> executeQueryPhase(request, task), channel)
+        );
+    }
+
     public ScrollQuerySearchResult executeQueryPhase(InternalScrollSearchRequest request, SearchTask task) {
         final SearchContext context = findContext(request.id());
         SearchOperationListener operationListener = context.indexShard().getSearchOperationListener();
@@ -327,6 +349,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } finally {
             cleanContext(context);
         }
+    }
+
+    public void executeQueryPhaseAndSendResponse(String action, QuerySearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, () -> executeQueryPhase(request, task), channel)
+        );
     }
 
     public QuerySearchResult executeQueryPhase(QuerySearchRequest request, SearchTask task) {
@@ -370,6 +399,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         }
     }
 
+    public void executeFetchPhaseAndSendResponse(String action, InternalScrollSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, () -> executeFetchPhase(request, task), channel)
+        );
+    }
+
     public ScrollQueryFetchSearchResult executeFetchPhase(InternalScrollSearchRequest request, SearchTask task) {
         final SearchContext context = findContext(request.id());
         context.incRef();
@@ -399,6 +435,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } finally {
             cleanContext(context);
         }
+    }
+
+    public void executeFetchPhaseAndSendResponse(String action, ShardFetchRequest request, SearchTask task, TransportChannel channel) throws IOException {
+        ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
+        getExecutor(shardSearchRequest).execute(
+            new TransportChannelResponseRunnable(action, () -> executeFetchPhase(request, task), channel)
+        );
     }
 
     public FetchSearchResult executeFetchPhase(ShardFetchRequest request, SearchTask task) {
@@ -782,6 +825,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         if (request.scroll() != null && request.scroll().keepAlive() != null) {
             context.keepAlive(request.scroll().keepAlive().millis());
         }
+    }
+
+    private Executor getExecutor(ShardSearchRequest request) {
+        Boolean throttleSearch = request.getThrottleSearch();
+        String executorName = throttleSearch != null && throttleSearch ? Names.SEARCH_THROTTLED : Names.SEARCH;
+        return threadPool.executor(executorName);
     }
 
     /**

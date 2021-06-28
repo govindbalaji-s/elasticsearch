@@ -135,6 +135,8 @@ public final class SearchSourceBuilder extends ToXContentToBytes implements Writ
 
     private Boolean explain;
 
+    private Boolean throttleSearch;
+
     private Boolean version;
 
     private List<SortBuilder<?>> sorts;
@@ -185,6 +187,7 @@ public final class SearchSourceBuilder extends ToXContentToBytes implements Writ
     public SearchSourceBuilder(StreamInput in) throws IOException {
         aggregations = in.readOptionalWriteable(AggregatorFactories.Builder::new);
         explain = in.readOptionalBoolean();
+        throttleSearch = in.readOptionalBoolean();
         fetchSourceContext = in.readOptionalWriteable(FetchSourceContext::new);
         docValueFields = (List<String>) in.readGenericValue();
         storedFieldsContext = in.readOptionalWriteable(StoredFieldsContext::new);
@@ -229,6 +232,7 @@ public final class SearchSourceBuilder extends ToXContentToBytes implements Writ
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalWriteable(aggregations);
         out.writeOptionalBoolean(explain);
+        out.writeOptionalBoolean(throttleSearch);
         out.writeOptionalWriteable(fetchSourceContext);
         out.writeGenericValue(docValueFields);
         out.writeOptionalWriteable(storedFieldsContext);
@@ -373,6 +377,21 @@ public final class SearchSourceBuilder extends ToXContentToBytes implements Writ
      */
     public Boolean explain() {
         return explain;
+    }
+
+    /**
+     * Should the request be executed on throttled thread pool
+     */
+    public SearchSourceBuilder setThrottleSearch(Boolean throttleSearch) {
+        this.throttleSearch = throttleSearch;
+        return this;
+    }
+
+    /**
+     * Indicates whether this request will be executed on throttled thread pool
+     */
+    public Boolean getThrottleSearch() {
+        return throttleSearch;
     }
 
     /**
@@ -903,6 +922,7 @@ public final class SearchSourceBuilder extends ToXContentToBytes implements Writ
         SearchSourceBuilder rewrittenBuilder = new SearchSourceBuilder();
         rewrittenBuilder.aggregations = aggregations;
         rewrittenBuilder.explain = explain;
+        rewrittenBuilder.throttleSearch = throttleSearch;
         rewrittenBuilder.extBuilders = extBuilders;
         rewrittenBuilder.fetchSourceContext = fetchSourceContext;
         rewrittenBuilder.docValueFields = docValueFields;
@@ -1433,7 +1453,7 @@ public final class SearchSourceBuilder extends ToXContentToBytes implements Writ
 
     @Override
     public int hashCode() {
-        return Objects.hash(aggregations, explain, fetchSourceContext, docValueFields, storedFieldsContext, from, highlightBuilder,
+        return Objects.hash(aggregations, explain, throttleSearch, fetchSourceContext, docValueFields, storedFieldsContext, from, highlightBuilder,
                 indexBoosts, minScore, postQueryBuilder, queryBuilder, rescoreBuilders, scriptFields, size,
                 sorts, searchAfterBuilder, sliceBuilder, stats, suggestBuilder, terminateAfter, timeout, trackScores, version,
                 profile, extBuilders, collapse);
@@ -1450,6 +1470,7 @@ public final class SearchSourceBuilder extends ToXContentToBytes implements Writ
         SearchSourceBuilder other = (SearchSourceBuilder) obj;
         return Objects.equals(aggregations, other.aggregations)
                 && Objects.equals(explain, other.explain)
+                && Objects.equals(throttleSearch, other.throttleSearch)
                 && Objects.equals(fetchSourceContext, other.fetchSourceContext)
                 && Objects.equals(docValueFields, other.docValueFields)
                 && Objects.equals(storedFieldsContext, other.storedFieldsContext)

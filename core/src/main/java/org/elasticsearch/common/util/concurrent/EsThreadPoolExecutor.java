@@ -19,6 +19,9 @@
 
 package org.elasticsearch.common.util.concurrent;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -34,6 +37,7 @@ public class EsThreadPoolExecutor extends ThreadPoolExecutor {
     private volatile ShutdownListener listener;
 
     private final Object monitor = new Object();
+    private static final Logger logger = LogManager.getLogger(EsThreadPoolExecutor.class);
     /**
      * Name used in error reporting.
      */
@@ -92,6 +96,7 @@ public class EsThreadPoolExecutor extends ThreadPoolExecutor {
     protected void doExecute(final Runnable command) {
         try {
             super.execute(command);
+            logger.info(command.toString() + " executed on thread pool = " + name);
         } catch (EsRejectedExecutionException ex) {
             if (command instanceof AbstractRunnable) {
                 // If we are an abstract runnable we can handle the rejection

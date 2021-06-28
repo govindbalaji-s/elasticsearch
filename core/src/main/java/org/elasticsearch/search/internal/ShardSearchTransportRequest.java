@@ -127,6 +127,11 @@ public class ShardSearchTransportRequest extends TransportRequest implements Sha
     }
 
     @Override
+    public Boolean getThrottleSearch() {
+        return shardSearchLocalRequest.getThrottleSearch();
+    }
+
+    @Override
     public Scroll scroll() {
         return shardSearchLocalRequest.scroll();
     }

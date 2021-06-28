@@ -22,6 +22,7 @@ package org.elasticsearch.rest.action.search;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -75,7 +76,11 @@ public class RestSearchAction extends BaseRestHandler {
         request.withContentOrSourceParamParserOrNull(parser ->
             parseSearchRequest(searchRequest, request, parser));
 
-        return channel -> client.search(searchRequest, new RestStatusToXContentListener<>(channel));
+        return channel -> {
+            String throttleSearch = request.header("throttle_search");
+            searchRequest.source().setThrottleSearch(Booleans.parseBoolean(throttleSearch, null));
+            client.search(searchRequest, new RestStatusToXContentListener<>(channel));
+        };
     }
 
     /**
@@ -86,7 +91,6 @@ public class RestSearchAction extends BaseRestHandler {
      */
     public static void parseSearchRequest(SearchRequest searchRequest, RestRequest request,
                                           XContentParser requestContentParser) throws IOException {
-
         if (searchRequest.source() == null) {
             searchRequest.source(new SearchSourceBuilder());
         }
@@ -167,7 +171,6 @@ public class RestSearchAction extends BaseRestHandler {
                 SearchSourceBuilder.STORED_FIELDS_FIELD + "] to retrieve stored fields or _source filtering " +
                 "if the field is not stored");
         }
-
 
         StoredFieldsContext storedFieldsContext =
             StoredFieldsContext.fromRestRequest(SearchSourceBuilder.STORED_FIELDS_FIELD.getPreferredName(), request);

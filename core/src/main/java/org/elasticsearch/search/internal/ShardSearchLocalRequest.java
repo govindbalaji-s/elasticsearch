@@ -68,6 +68,7 @@ public class ShardSearchLocalRequest implements ShardSearchRequest {
     private float indexBoost;
     private SearchSourceBuilder source;
     private Boolean requestCache;
+    private Boolean throttleSearch;
     private long nowInMillis;
 
     private boolean profile;
@@ -78,7 +79,7 @@ public class ShardSearchLocalRequest implements ShardSearchRequest {
     ShardSearchLocalRequest(SearchRequest searchRequest, ShardId shardId, int numberOfShards,
                             AliasFilter aliasFilter, float indexBoost, long nowInMillis) {
         this(shardId, numberOfShards, searchRequest.searchType(),
-                searchRequest.source(), searchRequest.types(), searchRequest.requestCache(), aliasFilter, indexBoost);
+                searchRequest.source(), searchRequest.types(), searchRequest.requestCache(), searchRequest.source().getThrottleSearch(), aliasFilter, indexBoost);
         this.scroll = searchRequest.scroll();
         this.nowInMillis = nowInMillis;
     }
@@ -92,13 +93,14 @@ public class ShardSearchLocalRequest implements ShardSearchRequest {
     }
 
     public ShardSearchLocalRequest(ShardId shardId, int numberOfShards, SearchType searchType, SearchSourceBuilder source, String[] types,
-            Boolean requestCache, AliasFilter aliasFilter, float indexBoost) {
+                                   Boolean requestCache, Boolean throttleSearch, AliasFilter aliasFilter, float indexBoost) {
         this.shardId = shardId;
         this.numberOfShards = numberOfShards;
         this.searchType = searchType;
         this.source = source;
         this.types = types;
         this.requestCache = requestCache;
+        this.throttleSearch = throttleSearch;
         this.aliasFilter = aliasFilter;
         this.indexBoost = indexBoost;
     }
@@ -155,6 +157,11 @@ public class ShardSearchLocalRequest implements ShardSearchRequest {
     }
 
     @Override
+    public Boolean getThrottleSearch() {
+        return throttleSearch;
+    }
+
+    @Override
     public Scroll scroll() {
         return scroll;
     }
@@ -193,6 +200,7 @@ public class ShardSearchLocalRequest implements ShardSearchRequest {
         }
         nowInMillis = in.readVLong();
         requestCache = in.readOptionalBoolean();
+        throttleSearch = in.readOptionalBoolean();
     }
 
     protected void innerWriteTo(StreamOutput out, boolean asKey) throws IOException {
@@ -212,6 +220,7 @@ public class ShardSearchLocalRequest implements ShardSearchRequest {
             out.writeVLong(nowInMillis);
         }
         out.writeOptionalBoolean(requestCache);
+        out.writeOptionalBoolean(throttleSearch);
     }
 
     @Override

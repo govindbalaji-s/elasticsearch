@@ -23,6 +23,7 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -84,21 +85,25 @@ public class RestCountAction extends BaseRestHandler {
         } else if (terminateAfter > 0) {
             searchSourceBuilder.terminateAfter(terminateAfter);
         }
-        return channel -> client.search(countRequest, new RestBuilderListener<SearchResponse>(channel) {
-            @Override
-            public RestResponse buildResponse(SearchResponse response, XContentBuilder builder) throws Exception {
-                builder.startObject();
-                if (terminateAfter != DEFAULT_TERMINATE_AFTER) {
-                    builder.field("terminated_early", response.isTerminatedEarly());
-                }
-                builder.field("count", response.getHits().totalHits());
-                buildBroadcastShardsHeader(builder, request, response.getTotalShards(), response.getSuccessfulShards(),
+        return channel -> {
+            String throttleSearch = request.header("throttle_search");
+            countRequest.source().setThrottleSearch(Booleans.parseBoolean(throttleSearch, null));
+            client.search(countRequest, new RestBuilderListener<SearchResponse>(channel) {
+                @Override
+                public RestResponse buildResponse(SearchResponse response, XContentBuilder builder) throws Exception {
+                    builder.startObject();
+                    if (terminateAfter != DEFAULT_TERMINATE_AFTER) {
+                        builder.field("terminated_early", response.isTerminatedEarly());
+                    }
+                    builder.field("count", response.getHits().totalHits());
+                    buildBroadcastShardsHeader(builder, request, response.getTotalShards(), response.getSuccessfulShards(),
                         response.getFailedShards(), response.getShardFailures());
 
-                builder.endObject();
-                return new BytesRestResponse(response.status(), builder);
-            }
-        });
+                    builder.endObject();
+                    return new BytesRestResponse(response.status(), builder);
+                }
+            });
+        };
     }
 
 }

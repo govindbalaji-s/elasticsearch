@@ -313,86 +313,77 @@ public class SearchTransportService extends AbstractLifecycleComponent {
         TransportActionProxy.registerProxyAction(transportService, CLEAR_SCROLL_CONTEXTS_ACTION_NAME,
             () -> TransportResponse.Empty.INSTANCE);
 
-        transportService.registerRequestHandler(DFS_ACTION_NAME, ShardSearchTransportRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(DFS_ACTION_NAME, ShardSearchTransportRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<ShardSearchTransportRequest>() {
                 @Override
                 public void messageReceived(ShardSearchTransportRequest request, TransportChannel channel, Task task) throws Exception {
-                    DfsSearchResult result = searchService.executeDfsPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
-
+                    searchService.executeDfsPhaseAndSendResponse(DFS_ACTION_NAME, request, (SearchTask) task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, DFS_ACTION_NAME, DfsSearchResult::new);
 
-        transportService.registerRequestHandler(QUERY_ACTION_NAME, ShardSearchTransportRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(QUERY_ACTION_NAME, ShardSearchTransportRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<ShardSearchTransportRequest>() {
                 @Override
                 public void messageReceived(ShardSearchTransportRequest request, TransportChannel channel, Task task) throws Exception {
-                    SearchPhaseResult result = searchService.executeQueryPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
+                    searchService.executeQueryPhaseAndSendResponse(QUERY_ACTION_NAME, request, (SearchTask)task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, QUERY_ACTION_NAME, QuerySearchResult::new);
 
-        transportService.registerRequestHandler(QUERY_ID_ACTION_NAME, QuerySearchRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(QUERY_ID_ACTION_NAME, QuerySearchRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<QuerySearchRequest>() {
                 @Override
                 public void messageReceived(QuerySearchRequest request, TransportChannel channel, Task task) throws Exception {
-                    QuerySearchResult result = searchService.executeQueryPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
+                    searchService.executeQueryPhaseAndSendResponse(QUERY_ID_ACTION_NAME, request, (SearchTask) task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, QUERY_ID_ACTION_NAME, QuerySearchResult::new);
 
-        transportService.registerRequestHandler(QUERY_SCROLL_ACTION_NAME, InternalScrollSearchRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(QUERY_SCROLL_ACTION_NAME, InternalScrollSearchRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<InternalScrollSearchRequest>() {
                 @Override
                 public void messageReceived(InternalScrollSearchRequest request, TransportChannel channel, Task task) throws Exception {
-                    ScrollQuerySearchResult result = searchService.executeQueryPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
+                    searchService.executeQueryPhaseAndSendResponse(QUERY_SCROLL_ACTION_NAME, request, (SearchTask) task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, QUERY_SCROLL_ACTION_NAME, ScrollQuerySearchResult::new);
 
         // this is for BWC with pre 5.3 indices in 5.3 we will only execute a `indices:data/read/search[phase/query+fetch]`
         // if the node is pre 5.3
-        transportService.registerRequestHandler(QUERY_FETCH_ACTION_NAME, ShardSearchTransportRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(QUERY_FETCH_ACTION_NAME, ShardSearchTransportRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<ShardSearchTransportRequest>() {
                 @Override
                 public void messageReceived(ShardSearchTransportRequest request, TransportChannel channel, Task task) throws Exception {
                     assert request.numberOfShards() == 1 : "expected single shard request but got: " + request.numberOfShards();
-                    SearchPhaseResult result = searchService.executeQueryPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
+                    searchService.executeQueryPhaseAndSendResponse(QUERY_FETCH_ACTION_NAME, request, (SearchTask) task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, QUERY_FETCH_ACTION_NAME, QueryFetchSearchResult::new);
 
-        transportService.registerRequestHandler(QUERY_FETCH_SCROLL_ACTION_NAME, InternalScrollSearchRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(QUERY_FETCH_SCROLL_ACTION_NAME, InternalScrollSearchRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<InternalScrollSearchRequest>() {
                 @Override
                 public void messageReceived(InternalScrollSearchRequest request, TransportChannel channel, Task task) throws Exception {
-                    ScrollQueryFetchSearchResult result = searchService.executeFetchPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
+                    searchService.executeFetchPhaseAndSendResponse(QUERY_FETCH_SCROLL_ACTION_NAME, request, (SearchTask) task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, QUERY_FETCH_SCROLL_ACTION_NAME, ScrollQueryFetchSearchResult::new);
 
-        transportService.registerRequestHandler(FETCH_ID_SCROLL_ACTION_NAME, ShardFetchRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(FETCH_ID_SCROLL_ACTION_NAME, ShardFetchRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<ShardFetchRequest>() {
                 @Override
                 public void messageReceived(ShardFetchRequest request, TransportChannel channel, Task task) throws Exception {
-                    FetchSearchResult result = searchService.executeFetchPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
+                    searchService.executeFetchPhaseAndSendResponse(FETCH_ID_SCROLL_ACTION_NAME, request, (SearchTask) task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, FETCH_ID_SCROLL_ACTION_NAME, FetchSearchResult::new);
 
-        transportService.registerRequestHandler(FETCH_ID_ACTION_NAME, ShardFetchSearchRequest::new, ThreadPool.Names.SEARCH,
+        transportService.registerRequestHandler(FETCH_ID_ACTION_NAME, ShardFetchSearchRequest::new, ThreadPool.Names.SAME,
             new TaskAwareTransportRequestHandler<ShardFetchSearchRequest>() {
                 @Override
                 public void messageReceived(ShardFetchSearchRequest request, TransportChannel channel, Task task) throws Exception {
-                    FetchSearchResult result = searchService.executeFetchPhase(request, (SearchTask)task);
-                    channel.sendResponse(result);
+                    searchService.executeFetchPhaseAndSendResponse(FETCH_ID_ACTION_NAME, request, (SearchTask) task, channel);
                 }
             });
         TransportActionProxy.registerProxyAction(transportService, FETCH_ID_ACTION_NAME, FetchSearchResult::new);
