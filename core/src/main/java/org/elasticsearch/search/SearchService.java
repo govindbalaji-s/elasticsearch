@@ -222,7 +222,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     public void executeDfsPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         getExecutor(request).execute(
-            new TransportChannelResponseRunnable(action, ()->executeDfsPhase(request, task), channel)
+            new TransportChannelResponseRunnable(action, () -> executeDfsPhase(request, task), channel)
         );
     }
 
@@ -259,7 +259,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     public void executeQueryPhaseAndSendResponse(String action, ShardSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         getExecutor(request).execute(
-            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, task), channel)
+            new TransportChannelResponseRunnable(action, () -> executeQueryPhase(request, task), channel)
         );
     }
 
@@ -323,7 +323,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     public void executeQueryPhaseAndSendResponse(String action, InternalScrollSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
         getExecutor(shardSearchRequest).execute(
-            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, task), channel)
+            new TransportChannelResponseRunnable(action, () -> executeQueryPhase(request, task), channel)
         );
     }
 
@@ -354,7 +354,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     public void executeQueryPhaseAndSendResponse(String action, QuerySearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
         getExecutor(shardSearchRequest).execute(
-            new TransportChannelResponseRunnable(action, ()->executeQueryPhase(request, task), channel)
+            new TransportChannelResponseRunnable(action, () -> executeQueryPhase(request, task), channel)
         );
     }
 
@@ -402,7 +402,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     public void executeFetchPhaseAndSendResponse(String action, InternalScrollSearchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
         getExecutor(shardSearchRequest).execute(
-            new TransportChannelResponseRunnable(action, ()->executeFetchPhase(request, task), channel)
+            new TransportChannelResponseRunnable(action, () -> executeFetchPhase(request, task), channel)
         );
     }
 
@@ -440,7 +440,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     public void executeFetchPhaseAndSendResponse(String action, ShardFetchRequest request, SearchTask task, TransportChannel channel) throws IOException {
         ShardSearchRequest shardSearchRequest = findContext(request.id()).request();
         getExecutor(shardSearchRequest).execute(
-            new TransportChannelResponseRunnable(action, ()->executeFetchPhase(request, task), channel)
+            new TransportChannelResponseRunnable(action, () -> executeFetchPhase(request, task), channel)
         );
     }
 
