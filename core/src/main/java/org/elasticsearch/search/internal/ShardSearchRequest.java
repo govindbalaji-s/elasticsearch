@@ -66,7 +66,7 @@ public interface ShardSearchRequest {
 
     Boolean requestCache();
 
-    Boolean isThrottled();
+    Boolean getThrottleSearch();
 
     Scroll scroll();
 

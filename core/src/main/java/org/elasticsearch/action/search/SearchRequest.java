@@ -79,8 +79,6 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
 
     private IndicesOptions indicesOptions = DEFAULT_INDICES_OPTIONS;
 
-    private Boolean isThrottled;
-
     public SearchRequest() {
     }
 
@@ -305,18 +303,6 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
         return source != null && source.isSuggestOnly();
     }
 
-    /**
-     * Sets if this request will be executed on SEARCH_THROTTLED thread pool, rather than the SEARCH thread pool.
-     */
-    public SearchRequest isThrottled(Boolean isThrottled) {
-        this.isThrottled = isThrottled;
-        return this;
-    }
-
-    public Boolean isThrottled() {
-        return isThrottled;
-    }
-
     @Override
     public Task createTask(long id, String type, String action, TaskId parentTaskId) {
         // generating description in a lazy way since source can be quite big
@@ -356,7 +342,6 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
         types = in.readStringArray();
         indicesOptions = IndicesOptions.readIndicesOptions(in);
         requestCache = in.readOptionalBoolean();
-        isThrottled = in.readOptionalBoolean();
         if (in.getVersion().onOrAfter(Version.V_5_4_0_UNRELEASED)) {
             batchedReduceSize = in.readVInt();
         }
@@ -377,7 +362,6 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
         out.writeStringArray(types);
         indicesOptions.writeIndicesOptions(out);
         out.writeOptionalBoolean(requestCache);
-        out.writeOptionalBoolean(isThrottled);
         if (out.getVersion().onOrAfter(Version.V_5_4_0_UNRELEASED)) {
             out.writeVInt(batchedReduceSize);
         }
@@ -398,7 +382,6 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
                 Objects.equals(preference, that.preference) &&
                 Objects.equals(source, that.source) &&
                 Objects.equals(requestCache, that.requestCache)  &&
-                Objects.equals(isThrottled, that.isThrottled) &&
                 Objects.equals(scroll, that.scroll) &&
                 Arrays.equals(types, that.types) &&
                 Objects.equals(indicesOptions, that.indicesOptions);
@@ -407,7 +390,7 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
     @Override
     public int hashCode() {
         return Objects.hash(searchType, Arrays.hashCode(indices), routing, preference, source, requestCache,
-                isThrottled, scroll, Arrays.hashCode(types), indicesOptions);
+                scroll, Arrays.hashCode(types), indicesOptions);
     }
 
     @Override
@@ -420,7 +403,6 @@ public final class SearchRequest extends ActionRequest implements IndicesRequest
                 ", routing='" + routing + '\'' +
                 ", preference='" + preference + '\'' +
                 ", requestCache=" + requestCache +
-                ", isThrottled=" + isThrottled +
                 ", scroll=" + scroll +
                 ", source=" + source + '}';
     }

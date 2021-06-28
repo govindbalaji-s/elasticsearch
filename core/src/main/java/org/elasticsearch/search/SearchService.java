@@ -24,13 +24,11 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.IOUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
-import org.elasticsearch.action.ActionRunnable;
 import org.elasticsearch.action.OriginalIndices;
 import org.elasticsearch.action.TransportChannelResponseRunnable;
 import org.elasticsearch.action.search.SearchTask;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.lucene.Lucene;
@@ -830,8 +828,8 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     }
 
     private Executor getExecutor(ShardSearchRequest request) {
-        Boolean isThrottled = request.isThrottled();
-        String executorName = isThrottled != null && isThrottled ? Names.SEARCH_THROTTLED : Names.SEARCH;
+        Boolean throttleSearch = request.getThrottleSearch();
+        String executorName = throttleSearch != null && throttleSearch ? Names.SEARCH_THROTTLED : Names.SEARCH;
         return threadPool.executor(executorName);
     }
 

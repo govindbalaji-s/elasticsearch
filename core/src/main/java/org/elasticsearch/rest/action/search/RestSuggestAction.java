@@ -23,6 +23,7 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -67,22 +68,25 @@ public class RestSuggestAction extends BaseRestHandler {
         }
         searchRequest.routing(request.param("routing"));
         searchRequest.preference(request.param("preference"));
-        searchRequest.isThrottled(request.paramAsBoolean("throttle", null));
-        return channel -> client.search(searchRequest, new RestBuilderListener<SearchResponse>(channel) {
-            @Override
-            public RestResponse buildResponse(SearchResponse response, XContentBuilder builder) throws Exception {
-                RestStatus restStatus = RestStatus.status(response.getSuccessfulShards(),
-                    response.getTotalShards(), response.getShardFailures());
-                builder.startObject();
-                buildBroadcastShardsHeader(builder, request, response.getTotalShards(),
-                    response.getSuccessfulShards(), response.getFailedShards(), response.getShardFailures());
-                Suggest suggest = response.getSuggest();
-                if (suggest != null) {
-                    suggest.toInnerXContent(builder, request);
+        return channel -> {
+            String throttleSearch = request.header("throttle_search");
+            searchRequest.source().setThrottleSearch(Booleans.parseBoolean(throttleSearch, null));
+            client.search(searchRequest, new RestBuilderListener<SearchResponse>(channel) {
+                @Override
+                public RestResponse buildResponse(SearchResponse response, XContentBuilder builder) throws Exception {
+                    RestStatus restStatus = RestStatus.status(response.getSuccessfulShards(),
+                        response.getTotalShards(), response.getShardFailures());
+                    builder.startObject();
+                    buildBroadcastShardsHeader(builder, request, response.getTotalShards(),
+                        response.getSuccessfulShards(), response.getFailedShards(), response.getShardFailures());
+                    Suggest suggest = response.getSuggest();
+                    if (suggest != null) {
+                        suggest.toInnerXContent(builder, request);
+                    }
+                    builder.endObject();
+                    return new BytesRestResponse(restStatus, builder);
                 }
-                builder.endObject();
-                return new BytesRestResponse(restStatus, builder);
-            }
-        });
+            });
+        };
     }
 }

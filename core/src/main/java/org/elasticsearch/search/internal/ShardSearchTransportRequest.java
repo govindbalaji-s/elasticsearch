@@ -127,8 +127,8 @@ public class ShardSearchTransportRequest extends TransportRequest implements Sha
     }
 
     @Override
-    public Boolean isThrottled() {
-        return shardSearchLocalRequest.isThrottled();
+    public Boolean getThrottleSearch() {
+        return shardSearchLocalRequest.getThrottleSearch();
     }
 
     @Override

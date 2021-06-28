@@ -499,8 +499,8 @@ public class SearchRequestBuilder extends ActionRequestBuilder<SearchRequest, Se
     /**
      * Sets if this request will be executed on SEARCH_THROTTLED thread pool, rather than the SEARCH thread pool.
      */
-    public SearchRequestBuilder setIsThrottled(Boolean isThrottled) {
-        request.isThrottled(isThrottled);
+    public SearchRequestBuilder setThrottleSearch(Boolean throttleSearch) {
+        request.source().setThrottleSearch(throttleSearch);
         return this;
     }
 

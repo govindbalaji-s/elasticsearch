@@ -163,8 +163,6 @@ public class RestMultiSearchAction extends BaseRestHandler {
                             searchRequest.searchType(nodeStringValue(value, null));
                         } else if ("request_cache".equals(entry.getKey()) || "requestCache".equals(entry.getKey())) {
                             searchRequest.requestCache(lenientNodeBooleanValue(value, entry.getKey()));
-                        } else if ("throttle".equals(entry.getKey())) {
-                            searchRequest.isThrottled(lenientNodeBooleanValue(value, entry.getKey()));
                         } else if ("preference".equals(entry.getKey())) {
                             searchRequest.preference(nodeStringValue(value, null));
                         } else if ("routing".equals(entry.getKey())) {
