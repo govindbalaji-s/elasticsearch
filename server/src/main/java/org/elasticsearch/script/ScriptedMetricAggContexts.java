@@ -18,12 +18,15 @@ import org.elasticsearch.search.lookup.SearchLookup;
 import org.elasticsearch.search.lookup.SourceLookup;
 
 import java.io.IOException;
+import java.lang.ref.Cleaner;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 public class ScriptedMetricAggContexts {
+    private static final Cleaner cleaner= Cleaner.create();
+
 
     public abstract static class InitScript {
         private final Map<String, Object> params;
