@@ -328,6 +328,11 @@ allprojects {
     }
   }
 
+  tasks.withType(JavaCompile) {
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+  }
+
   plugins.withType(JavaBasePlugin) {
     eclipse.classpath.defaultOutputDir = file('build-eclipse')
     eclipse.classpath.file.whenMerged { classpath ->
