@@ -25,8 +25,10 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class ScriptedMetricAggContexts {
+    private static final Cleaner cleaner= Cleaner.create();
 
-    public abstract static class InitScript implements CleaningScript{
+
+    public abstract static class InitScript {
         private final Map<String, Object> params;
         private final Map<String, Object> state;
 
@@ -51,10 +53,9 @@ public class ScriptedMetricAggContexts {
 
         public static String[] PARAMETERS = {};
         public static ScriptContext<Factory> CONTEXT = new ScriptContext<>("aggs_init", Factory.class);
-
     }
 
-    public abstract static class MapScript implements CleaningScript{
+    public abstract static class MapScript {
 
         private static final DeprecationLogger deprecationLogger = DeprecationLogger.getLogger(DynamicMap.class);
         private static final Map<String, Function<Object, Object>> PARAMS_FUNCTIONS = org.elasticsearch.common.collect.Map.of(
@@ -145,7 +146,7 @@ public class ScriptedMetricAggContexts {
         public static ScriptContext<Factory> CONTEXT = new ScriptContext<>("aggs_map", Factory.class);
     }
 
-    public abstract static class CombineScript implements CleaningScript{
+    public abstract static class CombineScript {
         private final Map<String, Object> params;
         private final Map<String, Object> state;
 
@@ -172,7 +173,7 @@ public class ScriptedMetricAggContexts {
         public static ScriptContext<Factory> CONTEXT = new ScriptContext<>("aggs_combine", Factory.class);
     }
 
-    public abstract static class ReduceScript implements CleaningScript{
+    public abstract static class ReduceScript {
         private final Map<String, Object> params;
         private final List<Object> states;
 
