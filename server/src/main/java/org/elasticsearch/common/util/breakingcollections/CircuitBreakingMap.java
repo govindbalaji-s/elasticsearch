@@ -8,7 +8,6 @@
 
 package org.elasticsearch.common.util.breakingcollections;
 
-import org.apache.lucene.util.RamUsageEstimator;
 import org.elasticsearch.common.breaker.CircuitBreaker;
 import org.elasticsearch.common.lease.Releasable;
 

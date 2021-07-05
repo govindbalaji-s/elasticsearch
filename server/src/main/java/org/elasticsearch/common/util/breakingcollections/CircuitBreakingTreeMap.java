@@ -13,7 +13,6 @@ import org.elasticsearch.common.breaker.CircuitBreaker;
 
 import java.util.Comparator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;

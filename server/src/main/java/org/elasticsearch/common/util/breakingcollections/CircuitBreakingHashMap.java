@@ -12,7 +12,6 @@ import org.apache.lucene.util.RamUsageEstimator;
 import org.elasticsearch.common.breaker.CircuitBreaker;
 
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.Optional;
 
 public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
