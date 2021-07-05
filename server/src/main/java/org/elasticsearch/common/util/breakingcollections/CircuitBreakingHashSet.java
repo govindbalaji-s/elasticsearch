@@ -11,11 +11,13 @@ package org.elasticsearch.common.util.breakingcollections;
 import org.apache.lucene.util.RamUsageEstimator;
 import org.elasticsearch.common.breaker.CircuitBreaker;
 
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.Objects;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 
-public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
+public class CircuitBreakingHashSet<E> extends CircuitBreakingSet<E>{
     private long perElementSize = -1;
     private long perElementObjectSize = -1;
     protected int capacity;
@@ -28,15 +30,19 @@ public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
     static final int MAXIMUM_CAPACITY = 1 << 30;
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
-    // bytes for the above fields themselves aren't counted.
-
-    public CircuitBreakingHashMap(CircuitBreaker circuitBreaker) {
-        super(circuitBreaker, new HashMap<>());
+    public CircuitBreakingHashSet(CircuitBreaker circuitBreaker) {
+        super(circuitBreaker, new HashSet<>());
         updateBreaker();
     }
 
-    public CircuitBreakingHashMap(CircuitBreaker circuitBreaker, int initialCapacity, float loadFactor) {
-        super(circuitBreaker, new HashMap<>(initialCapacity, loadFactor));
+    public CircuitBreakingHashSet(CircuitBreaker circuitBreaker, Collection<? extends E> c) {
+        super(circuitBreaker, new HashSet<>(c));
+        capacity = Math.max((int)((float)c.size() / 0.75F) + 1, 16);
+        updateBreaker();
+    }
+
+    public CircuitBreakingHashSet(CircuitBreaker circuitBreaker, int initialCapacity, float loadFactor) {
+        super(circuitBreaker, new HashSet<>(initialCapacity, loadFactor));
         // Copied from HashMap Coretto-1.8.0_292
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " +
@@ -51,9 +57,8 @@ public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
         updateBreaker();
     }
 
-    public CircuitBreakingHashMap(CircuitBreaker circuitBreaker, int initialCapacity) {
+    public CircuitBreakingHashSet(CircuitBreaker circuitBreaker, int initialCapacity) {
         this(circuitBreaker, initialCapacity, DEFAULT_LOAD_FACTOR);
-        updateBreaker();
     }
 
     /**
@@ -71,7 +76,7 @@ public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
 
     @Override
     protected void resizeIfRequired() {
-        while (size() > threshold) {
+        if(size() > threshold) {
             // Copy pasted from HashMap
             int newCapacity, newThreshold = 0;
             if (capacity > 0) {
@@ -103,13 +108,20 @@ public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
         if (perElementSize == -1) {
             calculatePerElementSizes();
         }
-        return RamUsageEstimator.shallowSizeOf(map) + capacity * perElementSize + threshold * perElementObjectSize;
+        return RamUsageEstimator.shallowSizeOf(set) + capacity * perElementSize + threshold * perElementObjectSize;
     }
 
     protected void calculatePerElementSizes() {
-        Optional<Entry<K, V>> optionalEntry = map.entrySet().stream().findAny();
-        assert this.size() > 0 && optionalEntry.isPresent(): "Size should have changed from 0";
-        Entry<K, V> entry = optionalEntry.get();
+        Optional<E> optionalElement = set.stream().findAny();
+        assert this.size() > 0 && optionalElement.isPresent(): "Size should have changed from 0";
+        //estimate size of inner map in the hash set
+        E element = optionalElement.get();
+        Map<E, Object> innerMap = new HashMap<>();
+        innerMap.put(element, new Object());
+
+        Optional<Map.Entry<E, Object>> optionalEntry = innerMap.entrySet().stream().findAny();
+        Map.Entry<E, Object> entry = optionalEntry.get();
+
         // there will never be elements for capacity - threshold elements
         perElementSize = RamUsageEstimator.shallowSizeOf(entry);
         perElementObjectSize = RamUsageEstimator.sizeOfObject(entry.getKey(), 0)

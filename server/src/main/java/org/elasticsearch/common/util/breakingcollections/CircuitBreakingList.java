@@ -14,73 +14,71 @@ import org.elasticsearch.common.breaker.CircuitBreaker;
 import java.util.*;
 
 /**
- * A wrapper around a List<E> that updates a CircuitBreaker, every time the list's size changes.
- * This uses ArrayList<E> internally. Override newInternalList() to use other implementations of List<E>
+ * A wrapper around a List that updates a CircuitBreaker, every time the list's size changes.
+ * This uses ArrayList internally.
  */
 public class CircuitBreakingList<E> extends CircuitBreakingCollection<E> implements List<E> {
 
     List<E> list;
     private static final int DEFAULT_CAPACITY = -1;
     int capacity = DEFAULT_CAPACITY;
+    private long perElementSize = -1;
 
     public CircuitBreakingList(CircuitBreaker circuitBreaker) {
-        super(circuitBreaker);
+        super(circuitBreaker, new ArrayList<>());
+        list = (List<E>) super.collection;
+        updateBreaker();
     }
 
     public CircuitBreakingList(CircuitBreaker circuitBreaker, int initialCapacity) {
-        super(circuitBreaker);
-        if (capacity < 0) {
-            throw new IllegalArgumentException("Illegal Capacity: " + initialCapacity);
-        }
+        super(circuitBreaker, new ArrayList<>(initialCapacity));
+        list = (List<E>) super.collection;
         capacity = initialCapacity;
+        updateBreaker();
     }
 
     public CircuitBreakingList(CircuitBreaker circuitBreaker, Collection<? extends E> collection) {
         this(circuitBreaker, collection.size());
         addAll(collection);
+        updateBreaker();
     }
 
     @Override
-    protected Collection<E> newInternalCollection() {
-        list = newInternalList();
-        return list;
-    }
-
-    @Override
-    protected long sizeToReserve() {
-        if (size() <= capacity) {
-            return capacity;
-        }
-        // Copy pasted from ArrayList.java(JBR - 11) so that capacity grows same as ArrayList's internal capacity
-        int minCapacity = size();
-        if (capacity == DEFAULT_CAPACITY) {
-            capacity = Math.max(10, minCapacity);
-        } else {
-            int newCapacity = capacity + (capacity >> 1);
-            if (newCapacity - minCapacity <= 0) {
-                capacity = minCapacity;
+    protected void resizeIfRequired() {
+        while (size() > capacity) {
+            // Copy pasted from ArrayList.java(JBR - 11) so that capacity grows same as ArrayList's internal capacity
+            int minCapacity = size();
+            if (capacity == DEFAULT_CAPACITY) {
+                capacity = Math.max(10, minCapacity);
             } else {
-                capacity = newCapacity - 2147483639 <= 0 ? newCapacity : (minCapacity > 2147483639 ? 2147483647 : 2147483639);
+                int newCapacity = capacity + (capacity >> 1);
+                if (newCapacity - minCapacity <= 0) {
+                    capacity = minCapacity;
+                } else {
+                    capacity = newCapacity - 2147483639 <= 0 ? newCapacity : (minCapacity > 2147483639 ? 2147483647 : 2147483639);
+                }
             }
         }
-        return capacity;
     }
 
-    protected List<E> newInternalList() {
-        List<E> list;
-        if (capacity == DEFAULT_CAPACITY) {
-            list = new ArrayList<>();
-        } else {
-            list = new ArrayList<>(capacity);
+    @Override
+    protected long bytesRequired() {
+        if (perElementSize == -1) {
+            calculatePerElementSize();
         }
-        addToBreaker(RamUsageEstimator.sizeOfObject(list, 0), false);
-        return list;
+        return RamUsageEstimator.shallowSizeOf(list) + RamUsageEstimator.NUM_BYTES_ARRAY_HEADER + capacity * perElementSize;
+    }
+
+    private void calculatePerElementSize() {
+        assert this.size() > 0 : "Size should have changed from 0";
+        perElementSize = RamUsageEstimator.sizeOfObject(collection.toArray()[0], 0) + RamUsageEstimator.NUM_BYTES_OBJECT_REF;
     }
 
     public void shrinkReservationToSize() {
         if (list instanceof ArrayList) {
             ((ArrayList<E>) list).trimToSize();
-            updateBreaker(size());
+            capacity = size();
+            updateBreaker();
         } else {
             throw new UnsupportedOperationException("Can not shrink internal list");
         }
@@ -146,20 +144,5 @@ public class CircuitBreakingList<E> extends CircuitBreakingCollection<E> impleme
     @Override
     public List<E> subList(int i, int i1) {
         return list.subList(i, i1);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        CircuitBreakingList<?> that = (CircuitBreakingList<?>) o;
-        return Objects.equals(list, that.list)
-                && Objects.equals(capacity, that.capacity);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), list, capacity);
     }
 }

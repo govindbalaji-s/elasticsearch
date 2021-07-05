@@ -140,13 +140,11 @@ public abstract class CircuitBreakingMap<K, V> implements Map<K, V>, Releasable 
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CircuitBreakingMap<?, ?> that = (CircuitBreakingMap<?, ?>) o;
-        return requestBytesAdded == that.requestBytesAdded &&
-                Objects.equals(circuitBreaker, that.circuitBreaker) &&
-                Objects.equals(map, that.map);
+        return Objects.equals(map, that.map);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(circuitBreaker, map, requestBytesAdded);
+        return Objects.hash(map);
     }
 }

@@ -8,9 +8,6 @@
 
 package org.elasticsearch.common.util.breakingcollections;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.lucene.util.RamUsageEstimator;
 import org.elasticsearch.common.breaker.CircuitBreaker;
 import org.elasticsearch.common.lease.Releasable;
 
@@ -23,53 +20,39 @@ public abstract class CircuitBreakingCollection<E> implements Collection<E>, Rel
     private final CircuitBreaker circuitBreaker;
     protected final Collection<E> collection;
     private long requestBytesAdded = 0;
-    protected long reservedSize = 0;
-    private long perElementSize = -1;
-    private static final Logger logger = LogManager.getLogger(CircuitBreakingCollection.class);
     // bytes for the above fields themselves aren't counted.
 
-    public CircuitBreakingCollection(CircuitBreaker circuitBreaker) {
-        super();
+    public CircuitBreakingCollection(CircuitBreaker circuitBreaker, Collection<E> collection) {
         this.circuitBreaker = circuitBreaker;
-        collection = newInternalCollection();
+        this.collection = collection;
     }
 
-    protected abstract Collection<E> newInternalCollection();
-
-    /**
-     * Return the size to reserve in CB, when the internal collection size changes.
-     */
-    protected abstract long sizeToReserve();
-
     protected void addToBreaker(long bytes, boolean checkBreaker) {
+        // Since this method is called after collection already grew, update reservedSize even if breaking.
+        this.requestBytesAdded += bytes;
         if (bytes >= 0 && checkBreaker) {
             circuitBreaker.addEstimateBytesAndMaybeBreak(bytes, "<CircuitBreakingCollection>");
         } else {
             circuitBreaker.addWithoutBreaking(bytes);
         }
-        this.requestBytesAdded += bytes;
     }
+
+    protected abstract void resizeIfRequired();
+    protected abstract long bytesRequired();
 
     protected void updateBreaker() {
-        long newReservedSize = sizeToReserve();
-        assert newReservedSize >= reservedSize : "Can only grow, not shrink";
-        updateBreaker(newReservedSize);
+        resizeIfRequired();
+        updateBreaker(bytesRequired());
     }
 
-    protected void updateBreaker(long newReservedSize) {
-        long sizeDiff = newReservedSize - reservedSize;
-        // Since this method is called after collection already grew, update reservedSize even if breaking.
-        reservedSize = newReservedSize;
-        if (sizeDiff == 0) {
+    protected void updateBreaker(long bytesRequired) {
+        long bytesDiff = bytesRequired - requestBytesAdded;
+        if (bytesDiff == 0) {
             return;
-        }
-        if (perElementSize == -1) {
-            assert this.size() > 0 : "Size should have changed from 0";
-            perElementSize = RamUsageEstimator.sizeOfObject(collection.toArray()[0], 0) + RamUsageEstimator.NUM_BYTES_OBJECT_REF;
         }
         // If it breaks, then the already created data will not be accounted for.
         // So we first add without breaking, and then check.
-        addToBreaker(sizeDiff * perElementSize, false);
+        addToBreaker(bytesDiff, false);
         addToBreaker(0, true);
     }
 
@@ -167,7 +150,6 @@ public abstract class CircuitBreakingCollection<E> implements Collection<E>, Rel
         try {
             collection.clear();
         } finally {
-            logger.info("I am reserving none from " + reservedSize);
             updateBreaker(0);
         }
     }
@@ -177,16 +159,12 @@ public abstract class CircuitBreakingCollection<E> implements Collection<E>, Rel
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CircuitBreakingCollection<?> that = (CircuitBreakingCollection<?>) o;
-        return requestBytesAdded == that.requestBytesAdded &&
-                reservedSize == that.reservedSize &&
-                perElementSize == that.perElementSize &&
-                Objects.equals(circuitBreaker, that.circuitBreaker) &&
-                Objects.equals(collection, that.collection);
+        return Objects.equals(collection, that.collection);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(circuitBreaker, collection, requestBytesAdded, reservedSize, perElementSize);
+        return Objects.hash(collection);
     }
 
     @Override
