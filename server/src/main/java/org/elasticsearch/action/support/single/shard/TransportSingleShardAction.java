@@ -96,7 +96,15 @@ public abstract class TransportSingleShardAction<Request extends SingleShardRequ
 
     protected void asyncShardOperation(Request request, ShardId shardId, ActionListener<Response> listener) throws IOException {
         threadPool.executor(getExecutor(request, shardId))
-            .execute(ActionRunnable.supply(listener, () -> shardOperation(request, shardId)));
+            .execute(ActionRunnable.supply(listener, () -> {
+                final String oldThreadName = Thread.currentThread().getName();
+                try {
+                    Thread.currentThread().setName(oldThreadName + "[" + shardId + "]");
+                    return shardOperation(request, shardId);
+                } finally {
+                    Thread.currentThread().setName(oldThreadName);
+                }
+            }));
     }
 
     protected abstract Writeable.Reader<Response> getResponseReader();

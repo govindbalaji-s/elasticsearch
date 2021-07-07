@@ -1378,14 +1378,20 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         } else {
             // we close the reader to make sure wrappers can release resources if needed....
             // our NonClosingReaderWrapper makes sure that our reader is not closed
-            final String oldThreadName = Thread.currentThread().getName();
-            Thread.currentThread().setName(oldThreadName + "[" + elasticsearchDirectoryReader.shardId()+ "]");
+//            final String oldThreadName = Thread.currentThread().getName();
+//            final String threadNameSuffix = "[" + elasticsearchDirectoryReader.shardId().toString() + "]";
+//            final boolean suffixAdded = !oldThreadName.endsWith(threadNameSuffix);
+//            if (suffixAdded) {
+//                Thread.currentThread().setName(oldThreadName + threadNameSuffix);
+//            }
             return new Engine.Searcher(engineSearcher.source(), reader,
                 engineSearcher.getSimilarity(), engineSearcher.getQueryCache(), engineSearcher.getQueryCachingPolicy(),
                 () -> {
                 IOUtils.close(reader, // this will close the wrappers excluding the NonClosingReaderWrapper
                         engineSearcher);
-                Thread.currentThread().setName(oldThreadName);
+//                if (suffixAdded) {
+//                    Thread.currentThread().setName(oldThreadName);
+//                }
                 }); // this will run the closeable on the wrapped engine reader
         }
     }
