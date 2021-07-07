@@ -22,7 +22,8 @@ import java.util.TreeSet;
 public class CircuitBreakingTreeSet<E> extends CircuitBreakingSet<E>{
 
     private long imaginaryCapacity;
-    private long perElementSize = -1;
+    private long perElementSize = 0;
+    private long baseSize;
 
     protected CircuitBreakingTreeSet(CircuitBreaker circuitBreaker, TreeSet<E> treeSet) {
         super(circuitBreaker, treeSet);
@@ -58,15 +59,18 @@ public class CircuitBreakingTreeSet<E> extends CircuitBreakingSet<E>{
 
     @Override
     protected long bytesRequired() {
-        if (perElementSize == -1) {
+        if (perElementSize == 0) {
             calculatePerElementSizes();
+            baseSize = RamUsageEstimator.shallowSizeOf(set);
         }
-        return RamUsageEstimator.shallowSizeOf(set) + imaginaryCapacity * perElementSize;
+        return baseSize + imaginaryCapacity * perElementSize;
     }
 
     protected void calculatePerElementSizes() {
+        if (size() == 0) {
+            return;
+        }
         Optional<E> optionalElement = set.stream().findAny();
-        assert this.size() > 0 && optionalElement.isPresent(): "Size should have changed from 0";
         //estimate size of inner map in the hash set
         E element = optionalElement.get();
         Map<E, Object> innerMap = new HashMap<>();

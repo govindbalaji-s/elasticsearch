@@ -19,7 +19,8 @@ import java.util.TreeMap;
 
 public class CircuitBreakingTreeMap<K, V> extends CircuitBreakingMap<K, V> {
     private long imaginaryCapacity;
-    private long perElementSize = -1;
+    private long perElementSize = 0;
+    private long baseSize;
 
     public CircuitBreakingTreeMap(CircuitBreaker circuitBreaker) {
         super(circuitBreaker, new TreeMap<>());
@@ -54,15 +55,18 @@ public class CircuitBreakingTreeMap<K, V> extends CircuitBreakingMap<K, V> {
 
     @Override
     protected long bytesRequired() {
-        if (perElementSize == -1) {
+        if (perElementSize == 0) {
             calculatePerElementSizes();
+            baseSize = RamUsageEstimator.shallowSizeOf(map);
         }
-        return RamUsageEstimator.shallowSizeOf(map) + imaginaryCapacity * perElementSize;
+        return baseSize + imaginaryCapacity * perElementSize;
     }
 
     protected void calculatePerElementSizes() {
+        if(size() == 0) {
+            return;
+        }
         Optional<Entry<K, V>> optionalEntry = map.entrySet().stream().findAny();
-        assert this.size() > 0 && optionalEntry.isPresent(): "Size should have changed from 0";
         Entry<K, V> entry = optionalEntry.get();
 
         perElementSize = RamUsageEstimator.shallowSizeOf(entry) + RamUsageEstimator.sizeOfObject(entry.getKey(), 0)

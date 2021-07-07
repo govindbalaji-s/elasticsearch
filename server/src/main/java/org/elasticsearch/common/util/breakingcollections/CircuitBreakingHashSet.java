@@ -18,8 +18,9 @@ import java.util.Map;
 import java.util.Optional;
 
 public class CircuitBreakingHashSet<E> extends CircuitBreakingSet<E>{
-    private long perElementSize = -1;
-    private long perElementObjectSize = -1;
+    private long perElementSize = 0;
+    private long perElementObjectSize = 0;
+    private long baseSize;
     protected int capacity;
     protected int threshold;
     protected float loadFactor = DEFAULT_LOAD_FACTOR;
@@ -105,15 +106,18 @@ public class CircuitBreakingHashSet<E> extends CircuitBreakingSet<E>{
 
     @Override
     protected long bytesRequired() {
-        if (perElementSize == -1) {
+        if (perElementSize == 0) {
             calculatePerElementSizes();
+            baseSize = RamUsageEstimator.shallowSizeOf(set);
         }
-        return RamUsageEstimator.shallowSizeOf(set) + capacity * perElementSize + threshold * perElementObjectSize;
+        return baseSize + capacity * perElementSize + threshold * perElementObjectSize;
     }
 
     protected void calculatePerElementSizes() {
+        if (set.size() == 0) {
+            return;
+        }
         Optional<E> optionalElement = set.stream().findAny();
-        assert this.size() > 0 && optionalElement.isPresent(): "Size should have changed from 0";
         //estimate size of inner map in the hash set
         E element = optionalElement.get();
         Map<E, Object> innerMap = new HashMap<>();

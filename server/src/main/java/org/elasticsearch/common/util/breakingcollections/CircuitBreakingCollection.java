@@ -150,7 +150,7 @@ public abstract class CircuitBreakingCollection<E> implements Collection<E>, Rel
         try {
             collection.clear();
         } finally {
-            updateBreaker(0);
+            updateBreaker();
         }
     }
 
@@ -170,5 +170,6 @@ public abstract class CircuitBreakingCollection<E> implements Collection<E>, Rel
     @Override
     public void close() {
         clear();
+        updateBreaker(0);
     }
 }

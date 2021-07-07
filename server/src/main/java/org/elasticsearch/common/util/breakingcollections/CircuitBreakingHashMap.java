@@ -15,8 +15,9 @@ import java.util.HashMap;
 import java.util.Optional;
 
 public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
-    private long perElementSize = -1;
-    private long perElementObjectSize = -1;
+    private long perElementSize = 0;
+    private long perElementObjectSize = 0;
+    private long baseSize = 0;
     protected int capacity;
     protected int threshold;
     protected float loadFactor = DEFAULT_LOAD_FACTOR;
@@ -99,15 +100,18 @@ public class CircuitBreakingHashMap<K,V> extends CircuitBreakingMap<K, V> {
 
     @Override
     protected long bytesRequired() {
-        if (perElementSize == -1) {
+        if (perElementSize == 0) {
             calculatePerElementSizes();
+            baseSize = RamUsageEstimator.shallowSizeOf(map);
         }
-        return RamUsageEstimator.shallowSizeOf(map) + capacity * perElementSize + threshold * perElementObjectSize;
+        return baseSize + capacity * perElementSize + threshold * perElementObjectSize;
     }
 
     protected void calculatePerElementSizes() {
+        if (map.size() == 0) {
+            return;
+        }
         Optional<Entry<K, V>> optionalEntry = map.entrySet().stream().findAny();
-        assert this.size() > 0 && optionalEntry.isPresent(): "Size should have changed from 0";
         Entry<K, V> entry = optionalEntry.get();
         // there will never be elements for capacity - threshold elements
         perElementSize = RamUsageEstimator.shallowSizeOf(entry);

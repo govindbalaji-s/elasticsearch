@@ -22,7 +22,8 @@ public class CircuitBreakingList<E> extends CircuitBreakingCollection<E> impleme
     List<E> list;
     private static final int DEFAULT_CAPACITY = -1;
     int capacity = DEFAULT_CAPACITY;
-    private long perElementSize = -1;
+    private long perElementSize = 0;
+    private long baseSize = 0;
 
     public CircuitBreakingList(CircuitBreaker circuitBreaker) {
         super(circuitBreaker, new ArrayList<>());
@@ -63,14 +64,17 @@ public class CircuitBreakingList<E> extends CircuitBreakingCollection<E> impleme
 
     @Override
     protected long bytesRequired() {
-        if (perElementSize == -1) {
+        if (perElementSize == 0) {
             calculatePerElementSize();
+            baseSize = RamUsageEstimator.shallowSizeOf(list);
         }
-        return RamUsageEstimator.shallowSizeOf(list) + RamUsageEstimator.NUM_BYTES_ARRAY_HEADER + capacity * perElementSize;
+        return baseSize + RamUsageEstimator.NUM_BYTES_ARRAY_HEADER + capacity * perElementSize;
     }
 
     private void calculatePerElementSize() {
-        assert this.size() > 0 : "Size should have changed from 0";
+        if(size() == 0) {
+            return;
+        }
         perElementSize = RamUsageEstimator.sizeOfObject(collection.toArray()[0], 0) + RamUsageEstimator.NUM_BYTES_OBJECT_REF;
     }
 
