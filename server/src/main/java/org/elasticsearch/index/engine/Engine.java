@@ -630,18 +630,8 @@ public abstract class Engine implements Closeable {
                 @Override
                 public Searcher acquireSearcherInternal(String source) {
                     assert assertSearcherIsWarmedUp(source, scope);
-//                    final String oldThreadName = Thread.currentThread().getName();
-//                    final String threadNameSuffix = "[" + shardId.toString() + "]";
-//                    final boolean suffixAdded = !oldThreadName.endsWith(threadNameSuffix);
-//                    if (suffixAdded) {
-//                        Thread.currentThread().setName(oldThreadName + threadNameSuffix);
-//                    }
                     return new Searcher(source, acquire, engineConfig.getSimilarity(), engineConfig.getQueryCache(),
-                        engineConfig.getQueryCachingPolicy(), () -> {
-//                        if (suffixAdded) {
-//                            Thread.currentThread().setName(oldThreadName);
-//                        }
-                    });
+                        engineConfig.getQueryCachingPolicy(), () -> {});
                 }
 
                 @Override
@@ -686,18 +676,9 @@ public abstract class Engine implements Closeable {
             SearcherSupplier reader = releasable = acquireSearcherSupplier(wrapper, scope);
             Searcher searcher = reader.acquireSearcher(source);
             releasable = null;
-//            final String oldThreadName = Thread.currentThread().getName();
-//            final String threadNameSuffix = "[" + shardId.toString() + "]";
-//            final boolean suffixAdded = !oldThreadName.endsWith(threadNameSuffix);
-//            if (suffixAdded) {
-//                Thread.currentThread().setName(oldThreadName + threadNameSuffix);
-//            }
             return new Searcher(source, searcher.getDirectoryReader(), searcher.getSimilarity(),
                 searcher.getQueryCache(), searcher.getQueryCachingPolicy(), () -> {
                 Releasables.close(searcher, reader);
-//                if (suffixAdded) {
-//                    Thread.currentThread().setName(oldThreadName);
-//                }
             });
         } finally {
             Releasables.close(releasable);
