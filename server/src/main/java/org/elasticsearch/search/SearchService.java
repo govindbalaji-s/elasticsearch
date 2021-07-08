@@ -110,6 +110,7 @@ import org.elasticsearch.search.sort.SortAndFormats;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.suggest.Suggest;
 import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
+import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.threadpool.Scheduler.Cancellable;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.threadpool.ThreadPool.Names;
@@ -330,12 +331,8 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
             public void onResponse(ShardSearchRequest rewritten) {
                 // fork the execution in the search thread pool
                 runAsync(getExecutor(shard), () -> {
-                    final String oldThreadName = Thread.currentThread().getName();
-                    try {
-                        Thread.currentThread().setName(oldThreadName + "[" + shard.shardId() + "]");
+                    try (ThreadInfoAppenderOnName ignored = new ThreadInfoAppenderOnName(shard, task)) {
                         return executeDfsPhase(request, task, keepStatesInContext);
-                    } finally {
-                        Thread.currentThread().setName(oldThreadName);
                     }
                 }, listener);
             }
@@ -401,14 +398,10 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 }
                 // fork the execution in the search thread pool
                 runAsync(getExecutor(shard), () -> {
-                        final String oldThreadName = Thread.currentThread().getName();
-                        try {
-                            Thread.currentThread().setName(oldThreadName + "[" + shard.shardId() + "]");
-                            return executeQueryPhase(orig, task, keepStatesInContext);
-                        } finally {
-                            Thread.currentThread().setName(oldThreadName);
-                        }
-                    }, listener);
+                    try (ThreadInfoAppenderOnName ignored = new ThreadInfoAppenderOnName(shard, task)) {
+                        return executeQueryPhase(orig, task, keepStatesInContext);
+                    }
+                }, listener);
             }
 
             @Override
@@ -490,12 +483,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
             freeReaderContext(readerContext.id());
             throw e;
         }
-        runAsync(getExecutor(readerContext.indexShard()), () -> {
-            final String oldThreadName = Thread.currentThread().getName();
-            Thread.currentThread().setName(oldThreadName + "[" + readerContext.indexShard().shardId() + "]");
+        final IndexShard shard = readerContext.indexShard();
+        runAsync(getExecutor(shard), () -> {
             final ShardSearchRequest shardSearchRequest = readerContext.getShardSearchRequest(null);
             try (SearchContext searchContext = createContext(readerContext, shardSearchRequest, task, false);
-                 SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(searchContext)) {
+                 SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(searchContext);
+                 ThreadInfoAppenderOnName ignored = new ThreadInfoAppenderOnName(shard, task)) {
                 searchContext.searcher().setAggregatedDfs(readerContext.getAggregatedDfs(null));
                 processScroll(request, readerContext, searchContext);
                 queryPhase.execute(searchContext);
@@ -506,8 +499,6 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 logger.trace("Query phase failed", e);
                 // we handle the failure in the failure listener below
                 throw e;
-            } finally {
-                Thread.currentThread().setName(oldThreadName);
             }
         }, wrapFailureListener(listener, readerContext, markAsUsed));
     }
@@ -516,12 +507,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         final ReaderContext readerContext = findReaderContext(request.contextId(), request.shardSearchRequest());
         final ShardSearchRequest shardSearchRequest = readerContext.getShardSearchRequest(request.shardSearchRequest());
         final Releasable markAsUsed = readerContext.markAsUsed(getKeepAlive(shardSearchRequest));
-        runAsync(getExecutor(readerContext.indexShard()), () -> {
-            final String oldThreadName = Thread.currentThread().getName();
-            Thread.currentThread().setName(oldThreadName + "[" + readerContext.indexShard().shardId() + "]");
+        final IndexShard shard = readerContext.indexShard();
+        runAsync(getExecutor(shard), () -> {
             readerContext.setAggregatedDfs(request.dfs());
             try (SearchContext searchContext = createContext(readerContext, shardSearchRequest, task, true);
-                 SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(searchContext)) {
+                 SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(searchContext);
+                 ThreadInfoAppenderOnName ignored = new ThreadInfoAppenderOnName(shard, task)) {
                 searchContext.searcher().setAggregatedDfs(request.dfs());
                 queryPhase.execute(searchContext);
                 if (searchContext.queryResult().hasSearchContext() == false && readerContext.singleSession()) {
@@ -540,8 +531,6 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 logger.trace("Query phase failed", e);
                 // we handle the failure in the failure listener below
                 throw e;
-            } finally {
-                Thread.currentThread().setName(oldThreadName);
             }
         }, wrapFailureListener(listener, readerContext, markAsUsed));
     }
@@ -570,12 +559,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
             freeReaderContext(readerContext.id());
             throw e;
         }
-        runAsync(getExecutor(readerContext.indexShard()), () -> {
-            final String oldThreadName = Thread.currentThread().getName();
-            Thread.currentThread().setName(oldThreadName + "[" + readerContext.indexShard().shardId() + "]");
+        final IndexShard shard = readerContext.indexShard();
+        runAsync(getExecutor(shard), () -> {
             final ShardSearchRequest shardSearchRequest = readerContext.getShardSearchRequest(null);
             try (SearchContext searchContext = createContext(readerContext, shardSearchRequest, task, false);
-                 SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(searchContext)) {
+                 SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(searchContext);
+                 ThreadInfoAppenderOnName ignored = new ThreadInfoAppenderOnName(shard, task)) {
                 searchContext.assignRescoreDocIds(readerContext.getRescoreDocIds(null));
                 searchContext.searcher().setAggregatedDfs(readerContext.getAggregatedDfs(null));
                 processScroll(request, readerContext, searchContext);
@@ -588,8 +577,6 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 logger.trace("Fetch phase failed", e);
                 // we handle the failure in the failure listener below
                 throw e;
-            } finally {
-                Thread.currentThread().setName(oldThreadName);
             }
         }, wrapFailureListener(listener, readerContext, markAsUsed));
     }
@@ -598,10 +585,10 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         final ReaderContext readerContext = findReaderContext(request.contextId(), request);
         final ShardSearchRequest shardSearchRequest = readerContext.getShardSearchRequest(request.getShardSearchRequest());
         final Releasable markAsUsed = readerContext.markAsUsed(getKeepAlive(shardSearchRequest));
-        runAsync(getExecutor(readerContext.indexShard()), () -> {
-            final String oldThreadName = Thread.currentThread().getName();
-            Thread.currentThread().setName(oldThreadName + "[" + readerContext.indexShard().shardId() + "]");
-            try (SearchContext searchContext = createContext(readerContext, shardSearchRequest, task, false)) {
+        final IndexShard shard = readerContext.indexShard();
+        runAsync(getExecutor(shard), () -> {
+            try (SearchContext searchContext = createContext(readerContext, shardSearchRequest, task, false);
+                 ThreadInfoAppenderOnName ignored = new ThreadInfoAppenderOnName(shard, task)) {
                 if (request.lastEmittedDoc() != null) {
                     searchContext.scrollContext().lastEmittedDoc = request.lastEmittedDoc();
                 }
@@ -621,8 +608,6 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 assert TransportActions.isShardNotAvailableException(e) == false : new AssertionError(e);
                 // we handle the failure in the failure listener below
                 throw e;
-            } finally {
-                Thread.currentThread().setName(oldThreadName);
             }
         }, wrapFailureListener(listener, readerContext, markAsUsed));
     }
@@ -1399,6 +1384,27 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                         listener.onFailedQueryPhase(context);
                     }
                 }
+            }
+        }
+    }
+
+    private class ThreadInfoAppenderOnName implements AutoCloseable {
+        final String oldName;
+        final String suffix;
+        final boolean nameChanged;
+
+        public ThreadInfoAppenderOnName(IndexShard shard, SearchShardTask task) {
+            oldName = Thread.currentThread().getName();
+            TaskId taskId = new TaskId(clusterService.localNode().getId(), task.getId());
+            suffix = "[" + shard.shardId() + "]" + "[taskId=" + taskId + "]";
+            if (!(nameChanged = oldName.endsWith(suffix))) {
+                Thread.currentThread().setName(oldName + suffix);
+            }
+        }
+        @Override
+        public void close() throws Exception {
+            if (nameChanged) {
+                Thread.currentThread().setName(oldName);
             }
         }
     }
