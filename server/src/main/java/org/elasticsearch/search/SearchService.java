@@ -1388,6 +1388,10 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         }
     }
 
+    /**
+     * Use this class to append the current search thread's name with the corresponding ShardId and TaskId.
+     * Upon closing, it resets thread name to that before it renamed.
+     */
     private class ThreadInfoAppenderOnName implements AutoCloseable {
         final String oldName;
         final String suffix;
@@ -1401,6 +1405,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 Thread.currentThread().setName(oldName + suffix);
             }
         }
+
         @Override
         public void close() throws Exception {
             if (nameChanged) {
