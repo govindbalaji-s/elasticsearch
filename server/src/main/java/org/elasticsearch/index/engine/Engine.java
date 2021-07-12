@@ -677,9 +677,7 @@ public abstract class Engine implements Closeable {
             Searcher searcher = reader.acquireSearcher(source);
             releasable = null;
             return new Searcher(source, searcher.getDirectoryReader(), searcher.getSimilarity(),
-                searcher.getQueryCache(), searcher.getQueryCachingPolicy(), () -> {
-                Releasables.close(searcher, reader);
-            });
+                searcher.getQueryCache(), searcher.getQueryCachingPolicy(), () -> Releasables.close(searcher, reader));
         } finally {
             Releasables.close(releasable);
         }

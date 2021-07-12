@@ -14,7 +14,6 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.indices.breaker.BreakerSettings;
 import org.elasticsearch.indices.breaker.HierarchyCircuitBreakerService;
 
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -63,8 +62,7 @@ public class ChildMemoryCircuitBreaker implements CircuitBreaker {
                 ", which is larger than the limit of [" +
                 memoryBytesLimit + "/" + new ByteSizeValue(memoryBytesLimit) + "]";
         logger.debug(() -> new ParameterizedMessage("{}", message));
-//        if(!name.equals(CircuitBreaker.REQUEST))
-            throw new CircuitBreakingException(message, bytesNeeded, memoryBytesLimit, durability);
+        throw new CircuitBreakingException(message, bytesNeeded, memoryBytesLimit, durability);
     }
 
     /**
@@ -94,6 +92,7 @@ public class ChildMemoryCircuitBreaker implements CircuitBreaker {
         } else {
             newUsed = limit(bytes, label, overheadConstant, memoryBytesLimit);
         }
+
         // Additionally, we need to check that we haven't exceeded the parent's limit
         try {
             parent.checkParentLimit((long) (bytes * overheadConstant), label, this.name);

@@ -22,11 +22,4 @@ public interface CircuitBreakerServicePlugin {
     default void setCircuitBreakerService(CircuitBreakerService circuitBreakerService) {
     }
 
-    /**
-     * When BigArrays is initialized, this method is invoked
-     *
-     * @param bigArrays the circuit breaking instance of BigArrays
-     */
-    default void setBigArrays(BigArrays bigArrays) {
-    }
 }

@@ -69,10 +69,6 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
             }
         }, Property.Dynamic, Property.NodeScope);
 
-    /** Same as TOTAL_CIRCUIT_BREAKER_LIMIT_SETTING but this is used when the triggering child breaker is
-     * CircuitBreaker.REQUEST.
-     * Default value = 90% of TOTAL_CIRCUIT_BREAKER_LIMIT_SETTING
-     */
     private static final List<String> TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR_DEFAULT = new ArrayList<>();
     public static final Setting<List<String>> TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR =
         Setting.listSetting("indices.breaker.total.exclude_real_memory_for", TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR_DEFAULT, Function.identity(),
@@ -307,18 +303,11 @@ public class HierarchyCircuitBreakerService extends CircuitBreakerService {
         return this.parentSettings.getLimit();
     }
 
-    /* For logging checkParentLimit*/
-    long lastUsed = 0;
-
     /**
      * Checks whether the parent breaker has been tripped
      */
     public void checkParentLimit(long newBytesReserved, String label, String childBreakerName) throws CircuitBreakingException {
         final MemoryUsage memoryUsed = memoryUsed(newBytesReserved);
-        if(Math.abs(memoryUsed.totalUsage - lastUsed) >= 1000000) {
-            logger.info("Memory Used = " + memoryUsed.baseUsage + ", " + memoryUsed.totalUsage);
-            lastUsed = memoryUsed.totalUsage;
-        }
         long parentLimit = this.parentSettings.getLimit();
         if (memoryUsed.totalUsage > parentLimit && overLimitStrategy.overLimit(memoryUsed).totalUsage > parentLimit) {
             // should not break if it is real memory and the child breaker is excluded

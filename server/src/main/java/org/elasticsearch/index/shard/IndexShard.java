@@ -1376,12 +1376,12 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         if (reader == nonClosingReaderWrapper) {
             return engineSearcher;
         } else {
+            // we close the reader to make sure wrappers can release resources if needed....
+            // our NonClosingReaderWrapper makes sure that our reader is not closed
             return new Engine.Searcher(engineSearcher.source(), reader,
                 engineSearcher.getSimilarity(), engineSearcher.getQueryCache(), engineSearcher.getQueryCachingPolicy(),
-                () -> {
-                IOUtils.close(reader, // this will close the wrappers excluding the NonClosingReaderWrapper
-                        engineSearcher);
-                }); // this will run the closeable on the wrapped engine reader
+                () -> IOUtils.close(reader, // this will close the wrappers excluding the NonClosingReaderWrapper
+                    engineSearcher)); // this will run the closeable on the wrapped engine reader
         }
     }
 

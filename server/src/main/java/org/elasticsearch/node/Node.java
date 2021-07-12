@@ -567,7 +567,6 @@ public class Node implements Closeable {
             pluginsService.filterPlugins(CircuitBreakerServicePlugin.class)
                 .forEach(plugin -> {
                     plugin.setCircuitBreakerService(circuitBreakerService);
-                    plugin.setBigArrays(bigArrays.withCircuitBreaking());
                 });
 
             ActionModule actionModule = new ActionModule(false, settings, clusterModule.getIndexNameExpressionResolver(),

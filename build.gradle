@@ -443,6 +443,7 @@ gradle.projectsEvaluated {
     }
   }
 }
+
 allprojects {
   tasks.register('resolveAllDependencies', org.elasticsearch.gradle.ResolveAllDependencies) {
     configs = project.configurations
@@ -450,6 +451,7 @@ allprojects {
       dependsOn tasks.withType(ComposePull)
     }
   }
+
   // helper task to print direct dependencies of a single task
   project.tasks.addRule("Pattern: <taskName>Dependencies") { String taskName ->
     if (taskName.endsWith("Dependencies") == false) {
