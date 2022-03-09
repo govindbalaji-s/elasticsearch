@@ -125,6 +125,7 @@ import org.elasticsearch.persistent.PersistentTasksService;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.AnalysisPlugin;
 import org.elasticsearch.plugins.CircuitBreakerPlugin;
+import org.elasticsearch.plugins.CircuitBreakerServicePlugin;
 import org.elasticsearch.plugins.ClusterPlugin;
 import org.elasticsearch.plugins.DiscoveryPlugin;
 import org.elasticsearch.plugins.EnginePlugin;
@@ -562,6 +563,11 @@ public class Node implements Closeable {
                                                  namedWriteableRegistry, clusterModule.getIndexNameExpressionResolver(),
                                                  repositoriesServiceReference::get).stream())
                 .collect(Collectors.toList());
+
+            pluginsService.filterPlugins(CircuitBreakerServicePlugin.class)
+                .forEach(plugin -> {
+                    plugin.setCircuitBreakerService(circuitBreakerService);
+                });
 
             ActionModule actionModule = new ActionModule(false, settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),

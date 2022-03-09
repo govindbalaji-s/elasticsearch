@@ -1,0 +1,50 @@
+
+1. Parent breaker's real memory breaking excluded for specified child circuit breakers
+
+Files changed:
+- ChildMemoryCircuitBreaker.java
+  Pass along child memory breaker's name as well in call to checkParentLimit()
+
+- ClusterSettings.java
+  Add HierarchyCircuitBreakerService.TOTAL_CIRCUIT_BREAKER_EXCLUDE_REAL_MEMORY_FOR setting
+
+- HierarchyCircuitBreakerService.java
+  Add setting "indices.breaker.total.exclude_real_memory_for" that takes a list of child circuit breakers' names.
+  For these paths, the parent real memory breaker will not break.
+
+2. Add hook for plugins to get hold of HierarchyCircuitBreakerService:
+
+Files changed:
+- CircuitBreakerServicePlugin.java
+  An interface for all plugins that need HierarchyCircuitBreakerService instance. The plugins can use the same passed
+  to setCircuitBreakerService()
+
+- Node.java
+  Use pluginsService to filter all plugins implementing CircuitBreakerServicePlugin and pass the breaker service
+  to them.
+
+3. Circuit Breaking Wrappers over java Collections
+
+Files Added:
+- CircuitBreakingCollection.java
+- CircuitBreakingHashMap.java
+- CircuitBreakingHashSet.java
+- CircuitBreakingList.java
+- CircuitBreakingMap.java
+- CircuitBreakingSet.java
+- CircuitBreakingTreeMap.java
+- CircuitBreakingTreeSet.java
+  Circuit Breaking wrappers over java collections. All these reserve sizes preemptively matching the growth rate of the arrays used in inner containers' implementation. For TreeMap and TreeSet, an imaginary growth rate similar to ArrayList is used to use CB in bulk with less overhead.
+
+- CBUtilsFactory.java
+  Factory class that takes a circuit breaker instance, and provides factory methods with same signatures as inner
+  collections' constructors for the circuit breaking wrappers and finalizing circuit breaking wrappers.
+
+4. Append index-shard & task-id to the search/throttled search pool thread names
+
+Files changed:
+- SearchService.java
+  Add a AutoClosable private class ThreadInfoAppenderOnName whose constructor takes the shardId and task.
+  It appends the thread name if not already appended as required. The close() resets the thread name to original.
+  
+  Was used with a try() {} finally {} block wrapping around the thread's actual execution.

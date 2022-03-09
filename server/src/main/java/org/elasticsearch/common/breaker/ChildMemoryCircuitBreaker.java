@@ -95,7 +95,7 @@ public class ChildMemoryCircuitBreaker implements CircuitBreaker {
 
         // Additionally, we need to check that we haven't exceeded the parent's limit
         try {
-            parent.checkParentLimit((long) (bytes * overheadConstant), label);
+            parent.checkParentLimit((long) (bytes * overheadConstant), label, this.name);
         } catch (CircuitBreakingException e) {
             // If the parent breaker is tripped, this breaker has to be
             // adjusted back down because the allocation is "blocked" but the
